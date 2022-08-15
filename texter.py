@@ -2,12 +2,23 @@
 from lib2to3.pgen2 import token
 from typing import Counter
 import streamlit as st
+from email.utils import collapse_rfc2231_value
+from turtle import color
+from unittest import result
+import altair as alt
+import tkinter as tk
 
 # NLP
 import neattext.functions as nfx
 
 # EDA
 import pandas as pd
+import numpy as np
+
+# Utils
+import joblib
+
+pipe_lr = joblib.load(open("model/emotion_classifier_pipe_lr_14_Aug_2022.pkl","rb"))
 
 # Text Downloader
 import base64
@@ -47,6 +58,16 @@ def get_entities(my_text):
     entities = [(entity.text,entity.label_) for entity in docx.ents]
     return entities
 
+def predict_emotions(docx):
+    results = pipe_lr.predict([docx])
+    return results[0]
+
+def get_prediction_proba(docx):
+    results = pipe_lr.predict_proba([docx])
+    return results
+
+emotions_emoji_dict = {"anger":"😠","disgust":"🤮", "fear":"😨😱", "happy":"🤗", "joy":"😂", "neutral":"😐", "sad":"😔", "sadness":"😔", "shame":"😳", "surprise":"😮"}
+
 HTML_WRAPPER = """<div style="overflow-x: auto; border: 1px solid #e6e9ef; border-radius: 0.25px">"""
 # @st.cache
 def render_entities(rawtext):
@@ -83,11 +104,13 @@ def make_downloadable(data):
 def main():
     st.title("Texter")
 
-    menu = ["Text Cleaner", "About"]
+    menu = ["Text Cleaner","Emotion Classifier","About"]
     choice = st.sidebar.selectbox("Menu", menu)
 
     if choice == "Text Cleaner":
-        st.subheader("Text Cleaning")
+        st.title("Text Cleaner")
+        menu = ["Text Cleaner", "About"]
+        choice = st.sidebar.selectbox("Select", menu)
         text_file = st.file_uploader("Upload Txt File", type=['txt'])
         normalize_case = st.sidebar.checkbox("Normalize Case")
         clean_stopwords = st.sidebar.checkbox("Stopwords")
@@ -96,63 +119,106 @@ def main():
         clean_special_char = st.sidebar.checkbox("Special Character")
         clean_numbers = st.sidebar.checkbox("Numbers")
         clean_urls = st.sidebar.checkbox("URL's")
-        if text_file is not None:
-            file_details = {"Filename":text_file.name,"Filesize":text_file.size,"Filetype":text_file.type}
-            st.write(file_details)
+        if choice == "Text Cleaner":
+            if text_file is not None:
+                file_details = {"Filename":text_file.name,"Filesize":text_file.size,"Filetype":text_file.type}
+                st.write(file_details)
 
-            # Decode Text
-            raw_text = text_file.read().decode('utf-8')
+                # Decode Text
+                raw_text = text_file.read().decode('utf-8')
 
-            col1,col2 = st.columns(2)
+                col1,col2 = st.columns(2)
 
-            with col1:
-                with st.expander("Original Text"):
+                with col1:
+                    with st.expander("Original Text"):
+                        st.write(raw_text)
+
+                with col2:
+                    with st.expander("Processed Text"):
+                        if normalize_case:
+                            raw_text = raw_text.lower()
+                        if clean_stopwords:
+                            raw_text = nfx.remove_stopwords(raw_text)
+                            
+                        if clean_numbers:
+                            raw_text = nfx.remove_numbers(raw_text)
+
+                        if clean_urls:
+                            raw_text = nfx.remove_urls(raw_text)
+
+                        if clean_emails:
+                            raw_text = nfx.remove_emails(raw_text)
+
+                        if clean_urls:
+                            raw_text = nfx.remove_urls(raw_text)
+
+                        if clean_punctuations:
+                            raw_text = nfx.remove_punctuations(raw_text)
+
+                        if clean_special_char:
+                            raw_text = nfx.remove_special_characters(raw_text)
+
+                        st.write(raw_text)
+
+                        text_downloader(raw_text)
+
+                with st.expander("Text Analysis"):
+                    token_result_df = text_analyzer(raw_text)
+                    st.dataframe(token_result_df)
+                    make_downloadable(token_result_df)
+
+                with st.expander("Plot Wordcloud"):
+                    plot_wordcloud(raw_text)
+
+                with st.expander("Plot PoS Tags"):
+                    fig = plt.figure()
+                    sns.countplot(token_result_df['PoS'])
+                    plt.xticks(rotation=45)
+                    st.pyplot(fig)
+
+            
+
+    if choice == "Emotion Classifier":
+        st.title("Emotion Classifier")
+        menu = ["Home", "About"]
+        choice = st.sidebar.selectbox("Select",menu)
+
+        if choice == "Home":
+            st.subheader("Emotions in Text")
+
+            with st.form(key='emotion_clf_form'):
+                raw_text = st.text_area("Type Here")
+                submit_text = st.form_submit_button(label='Submit')
+
+            if submit_text:
+                col1,col2 = st.columns(2)
+
+                # Apply Fxn Here
+                prediction = predict_emotions(raw_text)
+                probability = get_prediction_proba(raw_text)
+
+                with col1:
+                    st.success("Original Text")
                     st.write(raw_text)
 
-            with col2:
-                with st.expander("Processed Text"):
-                    if normalize_case:
-                        raw_text = raw_text.lower()
-                    if clean_stopwords:
-                        raw_text = nfx.remove_stopwords(raw_text)
-                        
-                    if clean_numbers:
-                        raw_text = nfx.remove_numbers(raw_text)
-
-                    if clean_urls:
-                        raw_text = nfx.remove_urls(raw_text)
-
-                    if clean_emails:
-                        raw_text = nfx.remove_emails(raw_text)
-
-                    if clean_urls:
-                        raw_text = nfx.remove_urls(raw_text)
-
-                    if clean_punctuations:
-                        raw_text = nfx.remove_punctuations(raw_text)
-
-                    st.write(raw_text)
-
-                    text_downloader(raw_text)
-
-            with st.expander("Text Analysis"):
-                token_result_df = text_analyzer(raw_text)
-                st.dataframe(token_result_df)
-                make_downloadable(token_result_df)
-
-            with st.expander("Plot Wordcloud"):
-                plot_wordcloud(raw_text)
-
-            with st.expander("Plot PoS Tags"):
-                fig = plt.figure()
-                sns.countplot(token_result_df['PoS'])
-                plt.xticks(rotation=45)
-                st.pyplot(fig)
+                    st.success("Prediction")
+                    emoji_icon = emotions_emoji_dict[prediction]
+                    st.write("{}:{}".format(prediction,emoji_icon))
+                    st.write("Confidence:{}".format(np.max(probability)))
 
 
-    else:
-        st.subheader("About")
-                    
+                with col2:
+                    st.success("Prediction Probability")
+                    #st.write(probability)
+                    proba_df = pd.DataFrame(probability,columns=pipe_lr.classes_)
+                    #st.write(proba_df.T)
+                    proba_df_clean = proba_df.T.reset_index()
+                    proba_df_clean.columns = ["emotions","probability"]
+
+                    fig = alt.Chart(proba_df_clean).mark_bar().encode(x='emotions',y='probability',color='emotions')
+                    st.altair_chart(fig,use_container_width=True)
+
+           
 
 if __name__ == '__main__':
     main()
