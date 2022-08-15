@@ -10,6 +10,9 @@ import tkinter as tk
 
 # NLP
 import neattext.functions as nfx
+import spacy 
+nlp = spacy.load("en_core_web_sm")
+from spacy import displacy
 
 # EDA
 import pandas as pd
@@ -32,6 +35,24 @@ import matplotlib
 matplotlib.use("Agg")
 from wordcloud import WordCloud
 
+# Sumy Summary Pkg
+from sumy.parsers.plaintext import PlaintextParser
+from sumy.nlp.tokenizers import Tokenizer
+from sumy.summarizers.lex_rank import LexRankSummarizer
+
+# Web Scraping Pkg
+from bs4 import BeautifulSoup
+from urllib.request import urlopen
+
+# Summary Pkgs
+from gensim.summarization import summarize
+
+# Sumy Summary Pkg
+
+from sumy.parsers.plaintext import PlaintextParser
+from sumy.nlp.tokenizers import Tokenizer
+from sumy.summarizers.lex_rank import LexRankSummarizer
+
 def plot_wordcloud(my_text):
     my_wordcloud = WordCloud().generate(my_text)
     fig = plt.figure()
@@ -39,14 +60,30 @@ def plot_wordcloud(my_text):
     plt.axis("off")
     st.pyplot(fig)
 
-
-
-# Load NLP Pkgs
-import spacy
-nlp = spacy.load("en_core_web_sm")
-from spacy import displacy
-
 # Fxns
+
+# Function for Sumy Summarization
+def sumy_summarizer(docx):
+	parser = PlaintextParser.from_string(docx,Tokenizer("english"))
+	lex_summarizer = LexRankSummarizer()
+	summary = lex_summarizer(parser.document,3)
+	summary_list = [str(sentence) for sentence in summary]
+	result = ' '.join(summary_list)
+	return result
+
+# Fetch Text From Url
+@st.cache
+def get_text(raw_url):
+	page = urlopen(raw_url)
+	soup = BeautifulSoup(page)
+	fetched_text = ' '.join(map(lambda p:p.text,soup.find_all('p')))
+	return fetched_text    
+
+# NLP
+#@st.cache(allow_output_mutation=True)
+def analyze_text(text):
+	return nlp(text)
+
 def text_analyzer(my_text):
     docx = nlp(my_text)
     allData = [(token.text,token.shape_,token.pos_,token.tag_,token.lemma_,token.is_alpha,token.is_stop) for token in docx]
@@ -68,7 +105,7 @@ def get_prediction_proba(docx):
 
 emotions_emoji_dict = {"anger":"😠","disgust":"🤮", "fear":"😨😱", "happy":"🤗", "joy":"😂", "neutral":"😐", "sad":"😔", "sadness":"😔", "shame":"😳", "surprise":"😮"}
 
-HTML_WRAPPER = """<div style="overflow-x: auto; border: 1px solid #e6e9ef; border-radius: 0.25px">"""
+HTML_WRAPPER = """<div style="overflow-x: auto; border: 1px solid #e6e9ef; border-radius: 0.25rem">"""
 # @st.cache
 def render_entities(rawtext):
     docx = nlp(rawtext)
@@ -104,22 +141,24 @@ def make_downloadable(data):
 def main():
     st.title("Texter")
 
-    menu = ["Text Cleaner","Emotion Classifier","About"]
+    menu = ["Text Cleaner","Emotion Classifier","Summarizer and Entity Checker","About"]
     choice = st.sidebar.selectbox("Menu", menu)
 
     if choice == "Text Cleaner":
         st.title("Text Cleaner")
         menu = ["Text Cleaner", "About"]
         choice = st.sidebar.selectbox("Select", menu)
-        text_file = st.file_uploader("Upload Txt File", type=['txt'])
-        normalize_case = st.sidebar.checkbox("Normalize Case")
-        clean_stopwords = st.sidebar.checkbox("Stopwords")
-        clean_punctuations = st.sidebar.checkbox("Punctuations")
-        clean_emails = st.sidebar.checkbox("Emails")
-        clean_special_char = st.sidebar.checkbox("Special Character")
-        clean_numbers = st.sidebar.checkbox("Numbers")
-        clean_urls = st.sidebar.checkbox("URL's")
+
         if choice == "Text Cleaner":
+            text_file = st.file_uploader("Upload Txt File", type=['txt'])
+            normalize_case = st.sidebar.checkbox("Normalize Case")
+            clean_stopwords = st.sidebar.checkbox("Stopwords")
+            clean_punctuations = st.sidebar.checkbox("Punctuations")
+            clean_emails = st.sidebar.checkbox("Emails")
+            clean_special_char = st.sidebar.checkbox("Special Character")
+            clean_numbers = st.sidebar.checkbox("Numbers")
+            clean_urls = st.sidebar.checkbox("URL's")
+
             if text_file is not None:
                 file_details = {"Filename":text_file.name,"Filesize":text_file.size,"Filetype":text_file.type}
                 st.write(file_details)
@@ -175,7 +214,9 @@ def main():
                     sns.countplot(token_result_df['PoS'])
                     plt.xticks(rotation=45)
                     st.pyplot(fig)
-
+        else:
+            st.subheader("About")
+            st.markdown("Its an app")
             
 
     if choice == "Emotion Classifier":
@@ -218,7 +259,59 @@ def main():
                     fig = alt.Chart(proba_df_clean).mark_bar().encode(x='emotions',y='probability',color='emotions')
                     st.altair_chart(fig,use_container_width=True)
 
-           
+
+        else:
+            st.subheader("About")
+            st.markdown("Its an app")
+
+    if choice == "Summarizer and Entity Checker":
+        st.title("Summarizer and Entity Checker")
+        menu = ["Summarize","NER Checker","NER For URLs","About"]
+        choice = st.sidebar.selectbox("Select",menu)
+
+        if choice == 'Summarize':
+                st.subheader("Summarize Document")
+                raw_text = st.text_area("Enter Text Here","Type Here")
+                summarizer_type = st.selectbox("Summarizer Type",["Gensim","Sumy Lex Rank"])
+                if st.button("Summarize"):
+                    if summarizer_type == "Gensim":
+                        summary_result = summarize(raw_text)
+                    elif summarizer_type == "Sumy Lex Rank":
+                        summary_result = sumy_summarizer(raw_text)
+
+                    st.write(summary_result)
+
+        if choice == 'NER Checker':
+                st.subheader("Named Entity Recognition with Spacy")
+                raw_text = st.text_area("Enter Text Here","Type Here")
+                if st.button("Analyze"):
+                    docx = analyze_text(raw_text)
+                    html = displacy.render(docx,style="ent")
+                    html = html.replace("\n\n","\n")
+                    st.write(HTML_WRAPPER.format(html),unsafe_allow_html=True)
+
+
+        if choice == 'NER For URLs':
+                st.subheader("Analysis on Text From URL")
+                raw_url = st.text_input("Enter URL Here","Type here")
+                text_preview_length = st.slider("Length to Preview",50,100)
+                if st.button("Analyze"):
+                    if raw_url != "Type here":
+                        result = get_text(raw_url)
+                        len_of_full_text = len(result)
+                        len_of_short_text = round(len(result)/text_preview_length)
+                        st.success("Length of Full Text::{}".format(len_of_full_text))
+                        st.success("Length of Short Text::{}".format(len_of_short_text))
+                        st.info(result[:len_of_short_text])
+                        summarized_docx = sumy_summarizer(result)
+                        docx = analyze_text(summarized_docx)
+                        html = displacy.render(docx,style="ent")
+                        html = html.replace("\n\n","\n")
+                        st.write(HTML_WRAPPER.format(html),unsafe_allow_html=True)      
+        else:
+            st.subheader("About")
+            st.markdown("Its an app")
+
 
 if __name__ == '__main__':
     main()
