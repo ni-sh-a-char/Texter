@@ -12,9 +12,8 @@ sumy
 wordcloud
 tk
 sklearn
-scipy
+scipy==1.0.0
 nltk
 gensim==3.0
 urllib3
-Mapping
 typing
