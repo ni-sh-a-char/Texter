@@ -1,12 +1,18 @@
-# Financer
+# Texter
 ![Screenshot](logo.png)
-# A Common Platform for Finance analysis.
+# A Common Platform for Text analysis in your documents.
 # Activities
-* Intro
-* Stocks Dashboard
-* Real-Time Dashboard
-* MPG Dashboard
-* Data Visualizer
+* Text Cleaner
+    * Normalize Case
+    * Stopwords
+    * Punctuations
+    * Emails
+    * Special Character     
+    * Numbers     
+    * URL's      
+* Emotion Classifier
+* Summarizer and Entity Checker
+* About
 # Methods to run the project
 * Terminal
 * Docker Hub
@@ -14,7 +20,7 @@
 # Install Python on your System.
 * Open terminal in the folder where you have pull the project.
 * Run "pip install -r requirements.txt" in root folder
-* Type: "streamlit run Financer.py"
+* Type: "streamlit run Texter.py"
 # Docker Hub
 * Install Docker in the System
 * Install Docker Hub in the System
