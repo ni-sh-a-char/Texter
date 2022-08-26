@@ -8,6 +8,7 @@ from unittest import result
 import altair as alt
 import tkinter as tk
 from PIL import Image
+from collections.abc import Mapping
 from scipy.special import logsumexp
 
 # NLP
