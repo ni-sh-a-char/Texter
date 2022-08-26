@@ -7,6 +7,8 @@ from turtle import color
 from unittest import result
 import altair as alt
 import tkinter as tk
+from PIL import Image
+from scipy.special import logsumexp
 
 # NLP
 import neattext.functions as nfx
@@ -139,6 +141,11 @@ def make_downloadable(data):
 
 
 def main():
+
+    image = Image.open('logo.png')
+
+    st.image(image, use_column_width=True)
+
     st.title("Texter")
 
     menu = ["Text Cleaner","Emotion Classifier","Summarizer and Entity Checker","About"]
