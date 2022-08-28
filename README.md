@@ -24,5 +24,5 @@
 # Docker Hub
 * Install Docker in the System
 * Install Docker Hub in the System
-* [Docker Image Link](https://hub.docker.com/repository/docker/piyushmishradocker/)
-* In the terminal type : "docker pull piyushmishradocker/"
+* [Docker Image Link](https://hub.docker.com/repository/docker/piyushmishradocker/texter)
+* In the terminal type : "docker pull piyushmishradocker/texter"
