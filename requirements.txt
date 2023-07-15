@@ -11,4 +11,5 @@ spacy
 streamlit
 sumy
 typing
+scikit-learn
 
