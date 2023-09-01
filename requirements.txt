@@ -1,15 +1,19 @@
 altair
-beautifulsoup4
-bs4
+pandas
+numpy
 joblib
 matplotlib
-neattext
-numpy
-pandas
 Pillow
+seaborn
+wordcloud
+PyPDF2
+python-docx
+bs4
+nltk
 spacy
-streamlit
+neattext
+ebooklib
 sumy
-typing
+streamlit
 scikit-learn
 
