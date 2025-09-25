@@ -3,226 +3,204 @@
 
 ---  
 
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/your-org/Texter)  
+![GitHub license](https://img.shields.io/github/license/your-org/Texter)  
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/texter)  
+![PyPI - Downloads](https://img.shields.io/pypi/dm/texter)  
+
+---  
+
 ## Table of Contents  
 
 | Section | Description |
 |---------|-------------|
 | **[Installation](#installation)** | How to get Texter up and running on your machine. |
-| **[Quick‑Start Usage](#quick-start-usage)** | One‑liner commands and basic Python usage. |
-| **[API Documentation](#api-documentation)** | Detailed reference for the public classes, functions and CLI. |
-| **[Examples](#examples)** | Real‑world snippets that show Texter in action. |
-| **[Contributing & Support](#contributing--support)** | How to help improve Texter. |
-| **[License](#license)** | Open‑source licensing information. |
+| **[Quick‑Start Usage](#quick-start-usage)** | One‑liner examples for the CLI and the Python API. |
+| **[API Documentation](#api-documentation)** | Detailed reference for the public classes, functions and data structures. |
+| **[Examples](#examples)** | Real‑world snippets that showcase common workflows. |
+| **[Contributing & Development](#contributing--development)** | How to contribute, run tests and build the docs. |
+| **[License](#license)** | Legal information. |
 
 ---  
 
 ## Installation  
 
-Texter is distributed as a pure‑Python package and can be installed via **pip**, **conda**, or directly from source.
+Texter is distributed as a pure‑Python package and can be installed from **PyPI**, **conda‑forge**, or directly from source.
 
 ### 1. From PyPI (recommended)
 
 ```bash
-# Create a virtual environment (optional but recommended)
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-
-# Install the latest stable release
+# Using pip (default)
 pip install texter
+
+# Or, if you prefer a user‑only install
+pip install --user texter
 ```
 
-### 2. From Conda‑Forge  
+### 2. From conda‑forge
 
 ```bash
 conda install -c conda-forge texter
 ```
 
-### 3. From source (development version)
+### 3. From source (development mode)
 
 ```bash
 # Clone the repository
-git clone https://github.com/your‑org/texter.git
-cd texter
+git clone https://github.com/your-org/Texter.git
+cd Texter
 
-# Install in editable mode with all optional dependencies
-pip install -e ".[dev,all]"
+# Install the package in editable mode with optional dev dependencies
+pip install -e .[dev]
+
+# Verify the installation
+python -c "import texter; print(texter.__version__)"
 ```
 
-> **Optional dependencies**  
-> - `pdf` – `textract`, `pdfminer.six` – for PDF extraction.  
-> - `docx` – `python-docx` – for Microsoft Word files.  
-> - `nlp` – `spacy`, `nltk`, `transformers` – for advanced linguistic analysis.  
+### 4. System requirements  
 
-You can install any subset, e.g.:
+| Requirement | Minimum version |
+|-------------|-----------------|
+| Python      | 3.9             |
+| pip         | 21.0+           |
+| OS          | Linux, macOS, Windows (WSL recommended for Windows) |
+| Optional external tools | `poppler` (for PDF rasterisation) – see [PDF support](#pdf-support) |
 
-```bash
-pip install "texter[pdf,docx]"
-```
-
-### 4. Verify the installation  
+> **Tip:** Texter uses `spaCy`, `NLTK`, and `scikit‑learn` under the hood. The first time you run an analyzer that needs a language model, Texter will automatically download the required model (e.g., `en_core_web_sm`). You can also pre‑download them manually:
 
 ```bash
-$ texter --version
-Texter 2.3.1
+python -m spacy download en_core_web_sm
 ```
 
 ---  
 
 ## Quick‑Start Usage  
 
-Texter can be used **as a command‑line tool**, **as a library**, or **as a web‑service** (via the optional `flask` extra). Below are the most common entry points.
+Texter can be used **as a command‑line tool** or **as a Python library**. Below are the most common entry points.
 
-### 2.1 CLI  
+### 1. CLI  
 
 ```bash
-# Basic analysis of a single file
+# Show the help
+texter --help
+
+# Analyse a single plain‑text file
 texter analyze path/to/file.txt
 
-# Batch processing of a directory (recursive)
-texter analyze ./documents --recursive --output results.json
+# Analyse a whole folder (recursive)
+texter analyze path/to/folder --recursive
 
-# Export a summary report (CSV, JSON, or Markdown)
-texter report results.json --format markdown > report.md
+# Export results to JSON
+texter analyze path/to/file.pdf --output results.json
+
+# Run a custom pipeline defined in a YAML file
+texter pipeline run pipelines/sentiment.yaml path/to/documents/
 ```
 
-#### CLI Options Overview  
+#### Common flags  
 
 | Flag | Description |
 |------|-------------|
-| `-h, --help` | Show help message and exit. |
+| `-o, --output <file>` | Write the full analysis report to *file* (JSON or CSV). |
+| `-f, --format <json|csv|txt>` | Choose the output serialization format. |
 | `-r, --recursive` | Walk sub‑directories when a folder is supplied. |
-| `-o, --output <file>` | Write the raw analysis JSON to *file*. |
-| `--lang <code>` | Force language detection (e.g., `en`, `de`, `fr`). |
-| `--pipeline <name>` | Choose a pre‑configured analysis pipeline (`basic`, `nlp`, `semantic`). |
-| `--threads <n>` | Number of worker threads for parallel processing (default: CPU count). |
+| `-p, --pipeline <name>` | Use a named pipeline from `texter/pipelines/`. |
+| `--quiet` | Suppress progress bars and non‑essential logs. |
 
-### 2.2 Python Library  
+### 2. Python API  
 
 ```python
-from texter import Texter, pipelines
+>>> from texter import Document, Analyzer, pipelines
 
-# Load a document (any supported format)
-doc = Texter.load("reports/annual_report.pdf")
+# Load a document (supports .txt, .pdf, .docx, .md)
+>>> doc = Document.from_path("reports/annual_report.pdf")
 
-# Run a built‑in pipeline (basic stats + language detection)
-result = doc.analyze(pipelines.basic)
+# Choose a built‑in analyzer (e.g., sentiment, readability)
+>>> analyzer = Analyzer(pipelines.sentiment)
 
-# Access results
-print("Word count:", result.stats.word_count)
-print("Detected language:", result.language.iso_code)
+# Run the analysis
+>>> result = analyzer.run(doc)
 
-# Save the JSON output
-result.to_json("annual_report_analysis.json")
+# Inspect the result (a dict‑like object)
+>>> result.summary()
+{
+    "sentiment": "neutral",
+    "polarity": 0.02,
+    "subjectivity": 0.31,
+    "word_count": 12457,
+    ...
+}
+
+# Export to JSON
+>>> result.to_json("output/annual_report_sentiment.json")
 ```
-
-#### Common workflow  
-
-```python
-from texter import Texter, Analyzer, pipelines
-
-# 1️⃣ Load one or many documents
-paths = ["doc1.txt", "doc2.docx", "presentation.pdf"]
-documents = [Texter.load(p) for p in paths]
-
-# 2️⃣ Choose a pipeline (or build a custom one)
-pipeline = pipelines.nlp   # includes tokenisation, POS, NER, sentiment
-
-# 3️⃣ Analyse in parallel (optional)
-analyzer = Analyzer(pipeline=pipeline, workers=4)
-results = analyzer.run(documents)
-
-# 4️⃣ Post‑process / visualise
-for r in results:
-    print(r.summary())
-```
-
-### 2.3 Web Service (optional)  
-
-```bash
-# Install the optional Flask extra
-pip install "texter[web]"
-
-# Start the server
-texter serve --host 0.0.0.0 --port 8080
-```
-
-The service exposes a simple REST API:
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/analyze` | Upload a file (multipart) and receive JSON analysis. |
-| `GET`  | `/api/pipelines` | List available pipelines. |
-| `GET`  | `/api/health` | Health‑check endpoint. |
 
 ---  
 
 ## API Documentation  
 
-> **Version:** 2.3.1 (latest)  
-> **Generated with:** `sphinx` + `autodoc` (see `docs/` folder for full HTML docs)
+Below is a concise reference for the public API. For the full autogenerated docs, see `docs/` or the online site at <https://your-org.github.io/Texter>.
 
-### 3.1 Core Classes  
+### `texter.__init__`  
 
-| Class | Purpose | Important Methods |
-|-------|---------|-------------------|
-| `Texter` | High‑level wrapper for a single document. Handles loading, format detection, and lazy parsing. | `load(path)`, `text`, `metadata`, `analyze(pipeline)`, `to_json(path)` |
-| `Analyzer` | Orchestrates batch processing, thread‑pool management, and pipeline execution. | `run(documents)`, `add_pipeline(name, pipeline)`, `close()` |
-| `Pipeline` | Immutable collection of `Processor` objects executed sequentially. | `add(processor)`, `execute(document)`, `name` |
-| `Result` | Container for the output of a single analysis run. Provides helpers for serialization and summarisation. | `to_dict()`, `to_json(path)`, `summary()`, `stats`, `language`, `entities` |
+| Symbol | Type | Description |
+|--------|------|-------------|
+| `__version__` | `str` | Current package version (e.g., `"1.3.2"`). |
+| `Document` | `class` | High‑level wrapper for any supported file type. |
+| `Analyzer` | `class` | Core engine that executes a pipeline on a `Document`. |
+| `Pipeline` | `class` | Container for a sequence of `Processor`s. |
+| `Processor` | `ABC` | Abstract base class for all processing steps (e.g., tokenisation, NER). |
+| `Result` | `class` | Structured output of an analysis (JSON‑serialisable). |
+| `pipelines` | `module` | Pre‑built pipelines (`sentiment`, `readability`, `entity_extraction`, …). |
 
-### 3.2 Processors (building blocks)  
+---
 
-All processors inherit from `texter.processors.base.Processor`. They receive a `Document` object and may augment it with new attributes.
+### `class texter.Document`  
 
-| Processor | Category | Typical Use |
-|-----------|----------|-------------|
-| `Tokeniser` | NLP | Splits raw text into tokens. |
-| `POSTagger` | NLP | Part‑of‑speech tagging (spaCy backend). |
-| `NER` | NLP | Named‑entity recognition. |
-| `SentimentAnalyzer` | NLP | Polarity & subjectivity scores (VADER / TextBlob). |
-| `LanguageDetector` | Meta | Detects language using `langdetect` or `fasttext`. |
-| `Readability` | Stats | Computes Flesch‑Kincaid, Gunning Fog, etc. |
-| `KeywordExtractor` | NLP | RAKE / YAKE based keyword extraction. |
-| `TopicModeler` | Advanced | LDA / BERTopic (requires `transformers`). |
-| `CustomProcessor` | Extensible | Subclass to implement your own logic. |
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `from_path` | `@classmethod def from_path(cls, path: str, encoding: str = "utf‑8") -> Document` | Load a document from a file system path. Auto‑detects format (`.txt`, `.pdf`, `.docx`, `.md`). |
+| `text` | `property` | Returns the plain‑text representation (Unicode). |
+| `metadata` | `property` | Dictionary with extracted metadata (author, creation date, etc.). |
+| `save` | `def save(self, path: str, format: str = "txt") -> None` | Write the (possibly cleaned) text back to disk. |
+| `__repr__` | `def __repr__(self) -> str` | Human‑readable representation. |
 
-#### Example: Creating a custom processor  
+**Supported formats**  
 
-```python
-from texter.processors.base import Processor
+| Extension | Backend |
+|-----------|---------|
+| `.txt` | Built‑in UTF‑8 reader |
+| `.md` | Markdown parser (`markdown-it-py`) |
+| `.pdf` | `pdfminer.six` (fallback to `poppler` if installed) |
+| `.docx` | `python-docx` |
+| `.html` | `beautifulsoup4` (strip tags) |
 
-class WordLengthStats(Processor):
-    """Adds average, min and max word length to the result."""
-    def process(self, doc):
-        lengths = [len(tok) for tok in doc.tokens]
-        doc.stats.word_length = {
-            "avg": sum(lengths) / len(lengths),
-            "min": min(lengths),
-            "max": max(lengths),
-        }
-        return doc
-```
+---
 
-Add it to a pipeline:
+### `class texter.Analyzer`  
 
-```python
-from texter import Pipeline
-pipeline = Pipeline(name="custom")
-pipeline.add(WordLengthStats())
-pipeline.add(pipelines.basic)   # chain with existing processors
-```
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `pipeline` | `Pipeline` | The processing pipeline to execute. |
+| `language` | `str` (default `"en"`) | Language code for language‑specific models. |
+| `cache_dir` | `str` (optional) | Directory for caching intermediate artefacts. |
+| `log_level` | `str` (default `"INFO"`) | Logging verbosity (`DEBUG`, `INFO`, `WARN`, `ERROR`). |
 
-### 3.3 Helper Functions  
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `run` | `def run(self, doc: Document) -> Result` | Execute the pipeline on *doc* and return a `Result`. |
+| `run_batch` | `def run_batch(self, docs: Iterable[Document]) -> List[Result]` | Process many documents in parallel (uses `concurrent.futures`). |
+| `add_processor` | `def add_processor(self, processor: Processor, position: int = -1) -> None` | Insert a custom processor into the pipeline. |
+| `set_logger` | `def set_logger(self, logger: logging.Logger) -> None` | Replace the internal logger. |
 
-| Function | Module | Description |
-|----------|--------|-------------|
-| `load(path)` | `texter.io` | Detects file type and returns a `Texter` instance. |
-| `detect_language(text)` | `texter.utils.lang` | Returns a `Language` object (`iso_code`, `name`, `confidence`). |
-| `export_to_csv(results, path)` | `texter.io.export` | Serialises a list of `Result` objects to CSV. |
-| `visualise_entities(result, output="html")` | `texter.visualisation` | Generates an interactive HTML view of NER tags. |
+---
 
-### 3.4 Configuration  
+### `class texter.Pipeline`  
 
-All defaults are stored in `texter.config.DEFAULTS`. You can override them globally:
+A pipeline is an ordered list of `Processor`s.  
 
-```
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `add` | `def add(self, processor: Processor) -> None` | Append a processor to the end of the pipeline. |
+| `insert` | `def insert(self, index: int, processor: Processor) -> None` | Insert at a specific position. |
+| `remove` | `def remove(self, name: str) -> None` | Remove
